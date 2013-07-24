@@ -75,15 +75,16 @@ mkprocess(const char *cmd, const char in, const char out, const char err) {
 }
 
 static void
-rmprocess(processimage *pimage) {
-	if(pimage->infd)
-		close(pimage->infd);
-	if(pimage->outfd)
-		close(pimage->outfd);
-	if(pimage->errfd)
-		close(pimage->errfd);
-	waitpid(pimage->pid, NULL, 0);
-	free(pimage);
+rmprocess(processimage **pimage) {
+	if((*pimage)->infd)
+		close((*pimage)->infd);
+	if((*pimage)->outfd)
+		close((*pimage)->outfd);
+	if((*pimage)->errfd)
+		close((*pimage)->errfd);
+	waitpid((*pimage)->pid, NULL, 0);
+	free(*pimage);
+	*pimage = NULL;
 }
 
 #endif

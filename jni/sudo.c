@@ -23,9 +23,13 @@ Java_koneu_rootapp_MainActivity_sudo(JNIEnv *env, jobject obj, jstring xmd) {
 			ret = JNI_FALSE;
 	} else {
 		char *buf;
-		asprintf(&buf, "su -c \"%s\"", cmd);
+		if(asprintf(&buf, "su -c \"%s\"", cmd) == -1) {
+			ret = JNI_FALSE;
+			goto END;
+		}
 		if(system(buf) != EXIT_SUCCESS)
 			ret = JNI_FALSE;
+		free(buf);
 	}
 	END:
 	(*env)->ReleaseStringUTFChars(env, xmd, cmd);
@@ -41,7 +45,6 @@ Java_koneu_rootapp_MainActivity_startshell(JNIEnv *env, jobject obj) {
 void
 Java_koneu_rootapp_MainActivity_closeshell(JNIEnv *env, jobject obj) {
 	if(process) {
-		rmprocess(process);
-		process = NULL;
+		rmprocess(&process);
 	}
 }
