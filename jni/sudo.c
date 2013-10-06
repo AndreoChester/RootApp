@@ -1,50 +1,58 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <jni.h>
 
 #include "pimage.h"
 
-static processimage *process;
+static processimage process;
+
+int
+sustem(char *cmd) {
+	int ret = -1;
+	pid_t child;
+	
+	switch((child = fork())) {
+		case -1:
+			return -1;
+			
+		case 0:
+			return execlp("su", "su", "-c", cmd, NULL);
+			
+		default:
+			waitpid(child, &ret, 0);
+	}
+	
+	return ret;
+}
 
 jboolean
 Java_koneu_rootapp_MainActivity_sudo(JNIEnv *env, jobject obj, jstring xmd) {
-	char const * const cmd = (*env)->GetStringUTFChars(env, xmd, 0), *rmd = cmd;
+	char const * const cmd = (*env)->GetStringUTFChars(env, xmd, 0), *rmd;
 	jboolean ret = JNI_TRUE;
-	if(process) {
-		while(rmd[0]  != 0) {
-			if(write(process->infd, rmd, 1) != 1) {
+	if(process.pid) {
+		for(rmd = cmd; *rmd; ++rmd) {
+			if(write(process.infd, rmd, 1) != 1)
 				ret = JNI_FALSE;
-				goto END;
-			}
-			rmd++;
 		}
-		if(write(process->infd, "\n", 1) != 1)
+		if(write(process.infd, "\n", 1) != 1)
 			ret = JNI_FALSE;
-	} else {
-		char *buf;
-		if(asprintf(&buf, "su -c \"%s\"", cmd) == -1) {
+	} else if(sustem(cmd))
 			ret = JNI_FALSE;
-			goto END;
-		}
-		if(system(buf) != EXIT_SUCCESS)
-			ret = JNI_FALSE;
-		free(buf);
-	}
-	END:
+	
 	(*env)->ReleaseStringUTFChars(env, xmd, cmd);
 	return ret;
 }
 
 void
 Java_koneu_rootapp_MainActivity_startshell(JNIEnv *env, jobject obj) {
-	if(!process)
-		process = mkprocess("su", 1, 0, 0);
+	if(!process.pid)
+		mkprocess("su", &process, 1, 0, 0);
 }
 
 void
 Java_koneu_rootapp_MainActivity_closeshell(JNIEnv *env, jobject obj) {
-	if(process) {
+	if(process.pid) {
 		rmprocess(&process);
 	}
 }
