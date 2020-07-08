@@ -8,7 +8,7 @@
 static processimage process;
 
 int
-sustem(char *cmd) {
+libsu_system(char *cmd) {
 	int ret = -1;
 	pid_t child;
 	
@@ -26,32 +26,23 @@ sustem(char *cmd) {
 	return ret;
 }
 
-jboolean
-Java_koneu_rootapp_MainActivity_sudo(JNIEnv *env, jobject obj, jstring xmd) {
-	char const * const cmd = (*env)->GetStringUTFChars(env, xmd, 0), *rmd;
-	jboolean ret = JNI_TRUE;
+bool libsu_sudo(const char * cmd) {
+        size_t len = strlen(cmd);
+	bool ret = true;
 	if(process.pid) {
-		for(rmd = cmd; *rmd; ++rmd) {
-			if(write(process.infd, rmd, 1) != 1)
-				ret = JNI_FALSE;
-		}
-		if(write(process.infd, "\n", 1) != 1)
-			ret = JNI_FALSE;
-	} else if(sustem(cmd))
-			ret = JNI_FALSE;
-	
+		if (write(process.infd, cmd, len) != len) ret = JNI_FALSE;
+		if (write(process.infd, "\n", 1) != 1) ret = JNI_FALSE;
+	} else if(libsu_system(cmd)) ret = JNI_FALSE;
 	(*env)->ReleaseStringUTFChars(env, xmd, cmd);
 	return ret;
 }
 
-void
-Java_koneu_rootapp_MainActivity_startshell(JNIEnv *env, jobject obj) {
+void libsu_startshell(JNIEnv *env, jobject obj) {
 	if(!process.pid)
 		mkprocess("su", &process, 1, 0, 0);
 }
 
-void
-Java_koneu_rootapp_MainActivity_closeshell(JNIEnv *env, jobject obj) {
+void libsu_closeshell(JNIEnv *env, jobject obj) {
 	if(process.pid) {
 		rmprocess(&process);
 	}
